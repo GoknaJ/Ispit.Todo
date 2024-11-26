@@ -3,6 +3,7 @@ using Ispit.Todo.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NuGet.Protocol;
 
 namespace Ispit.Todo.Controllers;
 
@@ -31,7 +32,9 @@ public class TodolistsController : Controller
         }
 
         var todolist = await _context.Todolists
+            .Include(t => t.TodoTasks)
             .FirstOrDefaultAsync(m => m.Id == id);
+
         if (todolist == null)
         {
             return NotFound();
@@ -39,6 +42,8 @@ public class TodolistsController : Controller
 
         return View(todolist);
     }
+
+
 
     // GET: Todolists/Create
     public IActionResult Create()
@@ -49,20 +54,26 @@ public class TodolistsController : Controller
     // POST: Todolists/Create
     // To protect from overposting attacks, enable the specific properties you want to bind to.
     // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("Id,Name,UserId")] Todolist todolist)
+    public async Task<IActionResult> Create([Bind("Id,Name,UserId,TodoTasks")] Todolist todolist)
     {
-        ModelState.Remove(nameof(todolist.TodoTasks));
-
         if (ModelState.IsValid)
         {
+            if (todolist.TodoTasks != null)
+            {
+                foreach (var task in todolist.TodoTasks)
+                {
+                    task.TodolistId = todolist.Id;  // Dodajemo TodolistId za svaki zadatak
+                }
+            }
             _context.Add(todolist);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
         return View(todolist);
     }
+
+
+
 
     // GET: Todolists/Edit/5
     public async Task<IActionResult> Edit(int? id)
